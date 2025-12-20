@@ -1,32 +1,56 @@
 package io.github.louiscieb.towerdefence;
 
 import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
-    private SpriteBatch batch;
-    private Texture image;
+
+    SpriteBatch batch;
+    OrthographicCamera camera;
+
+    TiledMap map;
+    OrthogonalTiledMapRenderer mapRenderer;
+
+    GameWorld world;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
-        image = new Texture("libgdx.png");
+
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, 1280, 720);
+
+        map = new TmxMapLoader().load("map.tmx");
+        mapRenderer = new OrthogonalTiledMapRenderer(map);
+
+        world = new GameWorld(map, camera);
     }
 
     @Override
     public void render() {
-        ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
+        float delta = Gdx.graphics.getDeltaTime();
+
+        camera.update();
+        mapRenderer.setView(camera);
+        mapRenderer.render();
+
+        world.update(delta);
+
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        batch.draw(image, 140, 210);
+        world.draw(batch);
         batch.end();
     }
 
     @Override
     public void dispose() {
         batch.dispose();
-        image.dispose();
+        map.dispose();
+        world.dispose();
     }
 }
