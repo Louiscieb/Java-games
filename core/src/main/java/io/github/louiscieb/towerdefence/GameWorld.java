@@ -6,8 +6,10 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.PolylineMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.math.Polyline;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -23,69 +25,82 @@ public class GameWorld {
     Array<Rectangle> buildZones = new Array<>();
 
     OrthographicCamera camera;
-
-    float spawnTimer = 0;
+    float spawnTimer = 0f;
 
     public GameWorld(TiledMap map, OrthographicCamera camera) {
         this.camera = camera;
 
-        MapLayer objects = map.getLayers().get("Objects");
-
-        // PATH WAYPOINTS
-        for (int i = 0; ; i++) {
-            MapObject obj = objects.getObjects().get("path_" + i);
-            if (obj == null) break;
-            Rectangle r = ((RectangleMapObject) obj).getRectangle();
-            path.add(new Vector2(r.x, r.y));
+        // ===== DEBUG: list layers =====
+        System.out.println("TMX layers:");
+        for (MapLayer l : map.getLayers()) {
+            System.out.println("- " + l.getName());
         }
 
-        // BUILD ZONES
-        for (MapObject obj : objects.getObjects()) {
+        // ===== OBJECT LAYER =====
+        MapLayer entities = map.getLayers().get("entities");
+        if (entities == null) {
+            throw new RuntimeException("Object layer 'entities' not found");
+        }
+
+        // ===== PATH (POLYLINE) =====
+        MapObject pathObj = entities.getObjects().get("Path");
+        if (pathObj == null) {
+            throw new RuntimeException("Path object not found (expected 'Path')");
+        }
+
+        if (!(pathObj instanceof PolylineMapObject)) {
+            throw new RuntimeException("Path must be a PolylineObject");
+        }
+
+        Polyline polyline = ((PolylineMapObject) pathObj).getPolyline();
+        float[] vertices = polyline.getTransformedVertices();
+
+        for (int i = 0; i < vertices.length; i += 2) {
+            path.add(new Vector2(vertices[i], vertices[i + 1]));
+        }
+
+        if (path.size < 2) {
+            throw new RuntimeException("Path must contain at least 2 points");
+        }
+
+        // ===== BUILD ZONES =====
+        for (MapObject obj : entities.getObjects()) {
             if ("build".equals(obj.getName())) {
+                if (!(obj instanceof RectangleMapObject)) {
+                    throw new RuntimeException("Build zones must be RectangleObjects");
+                }
                 buildZones.add(((RectangleMapObject) obj).getRectangle());
             }
         }
+
+        System.out.println("Loaded path points: " + path.size);
+        System.out.println("Loaded build zones: " + buildZones.size);
     }
 
     public void update(float delta) {
 
-        // SPAWN ENEMIES
+        // ===== SPAWN ENEMIES =====
         spawnTimer += delta;
         if (spawnTimer > 2f) {
             enemies.add(new Enemy(path));
-            spawnTimer = 0;
+            spawnTimer = 0f;
         }
 
-        // UPDATE ENEMIES
-        for (Enemy e : enemies) {
-            e.update(delta);
-        }
+        // ===== UPDATE =====
+        for (Enemy e : enemies) e.update(delta);
+        for (Tower t : towers) t.update(delta, enemies, projectiles);
+        for (Projectile p : projectiles) p.update(delta);
 
-        // UPDATE TOWERS
-        for (Tower t : towers) {
-            t.update(delta, enemies, projectiles);
-        }
-
-        // UPDATE PROJECTILES
-        for (Projectile p : projectiles) {
-            p.update(delta);
-        }
-
-        // CLEANUP
+        // ===== CLEANUP =====
         for (int i = enemies.size - 1; i >= 0; i--) {
-            if (enemies.get(i).isDead()) {
-                enemies.removeIndex(i);
-            }
+            if (enemies.get(i).isDead()) enemies.removeIndex(i);
         }
 
         for (int i = projectiles.size - 1; i >= 0; i--) {
-            if (projectiles.get(i).isDone()) {
-                projectiles.removeIndex(i);
-            }
+            if (projectiles.get(i).isDone()) projectiles.removeIndex(i);
         }
 
-
-        // BUILD ON CLICK
+        // ===== BUILD ON CLICK =====
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
             Vector3 mouse = camera.unproject(
                 new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0)
@@ -93,7 +108,10 @@ public class GameWorld {
 
             for (Rectangle r : buildZones) {
                 if (r.contains(mouse.x, mouse.y)) {
-                    towers.add(new Tower(r.x + r.width / 2, r.y + r.height / 2));
+                    towers.add(new Tower(
+                        r.x + r.width / 2,
+                        r.y + r.height / 2
+                    ));
                     break;
                 }
             }
