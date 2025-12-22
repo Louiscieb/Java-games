@@ -27,8 +27,16 @@ public class GameWorld {
     OrthographicCamera camera;
     float spawnTimer = 0f;
 
+    // NEW: map height in pixels (needed to flip Tiled rectangles)
+    private final float mapHeightPx;
+
     public GameWorld(TiledMap map, OrthographicCamera camera) {
         this.camera = camera;
+
+        // Map height in pixels = (map tiles high) * (tile height)
+        int mapH = map.getProperties().get("height", Integer.class);
+        int tileH = map.getProperties().get("tileheight", Integer.class);
+        mapHeightPx = mapH * tileH;
 
         // ===== DEBUG: list layers =====
         System.out.println("TMX layers:");
@@ -47,7 +55,6 @@ public class GameWorld {
         if (pathObj == null) {
             throw new RuntimeException("Path object not found (expected 'Path')");
         }
-
         if (!(pathObj instanceof PolylineMapObject)) {
             throw new RuntimeException("Path must be a PolylineObject");
         }
@@ -64,12 +71,25 @@ public class GameWorld {
         }
 
         // ===== BUILD ZONES =====
+        // IMPORTANT FIX: Tiled rectangles are stored with Y from TOP,
+        // LibGDX uses Y from BOTTOM, so we must flip Y.
         for (MapObject obj : entities.getObjects()) {
             if ("build".equals(obj.getName())) {
+
                 if (!(obj instanceof RectangleMapObject)) {
                     throw new RuntimeException("Build zones must be RectangleObjects");
                 }
-                buildZones.add(((RectangleMapObject) obj).getRectangle());
+
+                Rectangle raw = ((RectangleMapObject) obj).getRectangle();
+
+                Rectangle fixed = new Rectangle(
+                    raw.x,
+                    mapHeightPx - raw.y - raw.height, // <-- THIS is the fix
+                    raw.width,
+                    raw.height
+                );
+
+                buildZones.add(fixed);
             }
         }
 
@@ -95,27 +115,44 @@ public class GameWorld {
         for (int i = enemies.size - 1; i >= 0; i--) {
             if (enemies.get(i).isDead()) enemies.removeIndex(i);
         }
-
         for (int i = projectiles.size - 1; i >= 0; i--) {
             if (projectiles.get(i).isDone()) projectiles.removeIndex(i);
         }
 
         // ===== BUILD ON CLICK =====
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-            Vector3 mouse = camera.unproject(
-                new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0)
-            );
+            Vector3 mouse = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
 
             for (Rectangle r : buildZones) {
                 if (r.contains(mouse.x, mouse.y)) {
-                    towers.add(new Tower(
-                        r.x + r.width / 2,
-                        r.y + r.height / 2
-                    ));
+
+                    // Optional: prevent building multiple towers on same zone
+                    if (!hasTowerInZone(r)) {
+                        towers.add(new Tower(
+                            r.x + r.width / 2f,
+                            r.y + r.height / 2f
+                        ));
+                    }
+
                     break;
                 }
             }
         }
+    }
+
+    // Optional helper: stops spamming towers in same build rectangle
+    private boolean hasTowerInZone(Rectangle zone) {
+        float cx = zone.x + zone.width / 2f;
+        float cy = zone.y + zone.height / 2f;
+
+        for (Tower t : towers) {
+            // Tower draws at (position - 16), but position itself is centre
+            // so compare to centre point.
+            if (Math.abs(t.position.x - cx) < 0.1f && Math.abs(t.position.y - cy) < 0.1f) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void draw(SpriteBatch batch) {
