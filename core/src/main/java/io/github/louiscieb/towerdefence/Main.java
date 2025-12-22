@@ -46,7 +46,8 @@ public class Main extends ApplicationAdapter {
         map = new TmxMapLoader().load("map.tmx");
         mapRenderer = new OrthogonalTiledMapRenderer(map);
 
-        world = new GameWorld(map, camera);
+        world = new GameWorld(map, camera, viewport);
+
     }
 
     @Override
