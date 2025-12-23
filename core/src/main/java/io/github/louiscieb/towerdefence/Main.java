@@ -31,23 +31,15 @@ public class Main extends ApplicationAdapter {
         batch = new SpriteBatch();
 
         camera = new OrthographicCamera();
-        camera.setToOrtho(false,
-            MAP_WIDTH * TILE_SIZE,
-            MAP_HEIGHT * TILE_SIZE
-        );
+        camera.setToOrtho(false, MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE);
         camera.update();
 
-        viewport = new FitViewport(
-            MAP_WIDTH * TILE_SIZE,
-            MAP_HEIGHT * TILE_SIZE,
-            camera
-        );
+        viewport = new FitViewport(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, camera);
 
         map = new TmxMapLoader().load("map.tmx");
         mapRenderer = new OrthogonalTiledMapRenderer(map);
 
         world = new GameWorld(map, camera, viewport);
-
     }
 
     @Override
@@ -76,8 +68,9 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
-        batch.dispose();
-        map.dispose();
-        world.dispose();
+        if (world != null) world.dispose();
+        if (mapRenderer != null) mapRenderer.dispose();
+        if (map != null) map.dispose();
+        if (batch != null) batch.dispose();
     }
 }
