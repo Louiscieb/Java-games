@@ -26,7 +26,7 @@ public class GameWorld {
     // ===== BUILD ZONES =====
     private final Array<Rectangle> buildZones = new Array<>();
 
-    // ===== VIEWPORT (input only) =====
+    // ===== VIEWPORT =====
     private final Viewport viewport;
 
     // ===== TIMERS =====
@@ -35,7 +35,7 @@ public class GameWorld {
 
     // ===== ECONOMY =====
     private static final int TOWER_COST = 50;
-    private int gold = 30000;
+    private int gold = 300;
 
     // ===== BASE =====
     private static final int BASE_MAX_HP = 20;
@@ -46,6 +46,9 @@ public class GameWorld {
     private static final int MAX_ENEMY_LEVEL = 10;
     private static final float ENEMY_LEVEL_INTERVAL = 20f;
     private int enemyLevel = 1;
+
+    // ===== SPAWN CONTROL (🔥 FIX) =====
+    private boolean spawningEnabled = true;
 
     // ===== GAME STATE =====
     private GameState state = GameState.RUNNING;
@@ -63,7 +66,6 @@ public class GameWorld {
         if (entities == null)
             throw new RuntimeException("Object layer 'entities' not found");
 
-        // ===== PATH =====
         Polyline polyline =
             ((PolylineMapObject) entities.getObjects().get("Path")).getPolyline();
 
@@ -77,7 +79,6 @@ public class GameWorld {
         this.path = new Path(points);
         this.basePosition = path.last().cpy();
 
-        // ===== BUILD ZONES =====
         for (MapObject obj : entities.getObjects()) {
             if ("build".equals(obj.getName())) {
                 Rectangle r = ((RectangleMapObject) obj).getRectangle();
@@ -92,33 +93,44 @@ public class GameWorld {
     public void update(float delta) {
         if (state != GameState.RUNNING) return;
 
-        // enemy level progression
+        // ===== LEVEL PROGRESSION =====
         enemyLevelTimer += delta;
         if (enemyLevelTimer >= ENEMY_LEVEL_INTERVAL) {
             enemyLevelTimer = 0f;
-            if (enemyLevel < MAX_ENEMY_LEVEL) enemyLevel++;
+
+            if (enemyLevel < MAX_ENEMY_LEVEL) {
+                enemyLevel++;
+            } else {
+                // 🔥 stop spawning forever at level 10
+                spawningEnabled = false;
+            }
         }
 
-        // spawn enemy
-        spawnTimer += delta;
-        if (spawnTimer > 2f) {
-            enemies.add(new Enemy(path, enemyLevel));
-            spawnTimer = 0f;
+        // ===== SPAWNING =====
+        if (spawningEnabled) {
+            spawnTimer += delta;
+            if (spawnTimer > 2f) {
+                enemies.add(new Enemy(path, enemyLevel));
+                spawnTimer = 0f;
+            }
         }
 
-        // update entities
+        // ===== UPDATE ENTITIES =====
         for (Enemy e : enemies) e.update(delta);
         for (Tower t : towers) t.update(delta, enemies, projectiles);
         for (Projectile p : projectiles) p.update(delta);
 
-        // enemy resolution
+        // ===== ENEMY RESOLUTION =====
         for (int i = enemies.size - 1; i >= 0; i--) {
             Enemy e = enemies.get(i);
 
             if (e.reachedBase()) {
                 baseHp--;
                 enemies.removeIndex(i);
-                if (baseHp <= 0) state = GameState.GAME_OVER;
+
+                if (baseHp <= 0) {
+                    state = GameState.GAME_OVER;
+                }
                 continue;
             }
 
@@ -128,15 +140,15 @@ public class GameWorld {
             }
         }
 
-        // projectile cleanup
+        // ===== PROJECTILE CLEANUP =====
         for (int i = projectiles.size - 1; i >= 0; i--) {
             if (projectiles.get(i).isDone()) {
                 projectiles.removeIndex(i);
             }
         }
 
-        // win condition
-        if (enemyLevel == MAX_ENEMY_LEVEL && enemies.size == 0 && baseHp > 0) {
+        // ===== WIN CONDITION (🔥 NOW WORKS) =====
+        if (!spawningEnabled && enemies.isEmpty() && baseHp > 0) {
             state = GameState.WIN;
         }
 
@@ -195,7 +207,7 @@ public class GameWorld {
     }
 
     // =====================
-    // GETTERS (MVC → VIEW)
+    // GETTERS
     // =====================
     public Array<Enemy> getEnemies() { return enemies; }
     public Array<Tower> getTowers() { return towers; }
