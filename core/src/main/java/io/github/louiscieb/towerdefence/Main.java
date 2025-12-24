@@ -11,35 +11,70 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import io.github.louiscieb.towerdefence.controller.GameWorld;
+import io.github.louiscieb.towerdefence.model.Enemy;
+import io.github.louiscieb.towerdefence.model.Projectile;
+import io.github.louiscieb.towerdefence.model.Tower;
+import io.github.louiscieb.towerdefence.view.EnemyRenderer;
+import io.github.louiscieb.towerdefence.view.HudRenderer;
+import io.github.louiscieb.towerdefence.view.ProjectileRenderer;
+import io.github.louiscieb.towerdefence.view.TowerRenderer;
+import io.github.louiscieb.towerdefence.view.Assets;
+
 public class Main extends ApplicationAdapter {
 
     private static final int TILE_SIZE = 32;
     private static final int MAP_WIDTH = 50;
     private static final int MAP_HEIGHT = 50;
 
-    SpriteBatch batch;
-    OrthographicCamera camera;
-    Viewport viewport;
+    private SpriteBatch batch;
+    private OrthographicCamera camera;
+    private Viewport viewport;
 
-    TiledMap map;
-    OrthogonalTiledMapRenderer mapRenderer;
+    private TiledMap map;
+    private OrthogonalTiledMapRenderer mapRenderer;
 
-    GameWorld world;
+    private GameWorld world;
+
+    // ===== VIEW / RENDERERS =====
+    private EnemyRenderer enemyRenderer;
+    private TowerRenderer towerRenderer;
+    private ProjectileRenderer projectileRenderer;
+    private HudRenderer hudRenderer;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
 
+        // ===== CAMERA (VIEW ONLY) =====
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE);
+        camera.setToOrtho(false,
+            MAP_WIDTH * TILE_SIZE,
+            MAP_HEIGHT * TILE_SIZE
+        );
         camera.update();
 
-        viewport = new FitViewport(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, camera);
+        viewport = new FitViewport(
+            MAP_WIDTH * TILE_SIZE,
+            MAP_HEIGHT * TILE_SIZE,
+            camera
+        );
 
-        map = new TmxMapLoader().load("map.tmx");
+        // ===== MAP =====
+        map = new TmxMapLoader().load("maps/map.tmx");
         mapRenderer = new OrthogonalTiledMapRenderer(map);
 
-        world = new GameWorld(map, camera, viewport);
+        // ===== ASSETS (🔥 OBLIGATOIRE AVANT RENDERERS) =====
+        Assets.load();
+
+        // ===== CONTROLLER (MVC) =====
+        world = new GameWorld(map, viewport);
+
+        // ===== VIEW / RENDERERS =====
+        enemyRenderer = new EnemyRenderer();
+        towerRenderer = new TowerRenderer();
+        projectileRenderer = new ProjectileRenderer();
+        hudRenderer = new HudRenderer();
     }
 
     @Override
@@ -50,14 +85,57 @@ public class Main extends ApplicationAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         camera.update();
+
+        // ===== MAP RENDER =====
         mapRenderer.setView(camera);
         mapRenderer.render();
 
+        // ===== UPDATE GAME (CONTROLLER) =====
         world.update(delta);
 
+        // ===== RENDER GAME (VIEW) =====
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        world.draw(batch);
+
+        for (Enemy e : world.getEnemies()) {
+            enemyRenderer.render(batch, e);
+        }
+
+        for (Tower t : world.getTowers()) {
+            towerRenderer.render(batch, t);
+        }
+
+        for (Projectile p : world.getProjectiles()) {
+            projectileRenderer.render(batch, p);
+        }
+
+        // ===== HUD =====
+        float camLeft = camera.position.x - camera.viewportWidth / 2f;
+        float camTop  = camera.position.y + camera.viewportHeight / 2f;
+
+        hudRenderer.renderBaseHp(
+            batch,
+            world.getBasePosition(),
+            world.getBaseHp(),
+            world.getBaseMaxHp()
+        );
+
+        hudRenderer.renderTopLeft(
+            batch,
+            camLeft,
+            camTop,
+            world.getGold(),
+            world.getEnemyLevel(),
+            world.getMaxEnemyLevel()
+        );
+
+        hudRenderer.renderState(
+            batch,
+            camera.position.x,
+            camera.position.y,
+            world.getState()
+        );
+
         batch.end();
     }
 
@@ -68,9 +146,18 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
-        if (world != null) world.dispose();
+
+        // ===== VIEW =====
+        if (enemyRenderer != null) enemyRenderer.dispose();
+        if (towerRenderer != null) towerRenderer.dispose();
+        if (projectileRenderer != null) projectileRenderer.dispose();
+        if (hudRenderer != null) hudRenderer.dispose();
+
+        // ===== MAP / CORE =====
         if (mapRenderer != null) mapRenderer.dispose();
         if (map != null) map.dispose();
         if (batch != null) batch.dispose();
+
+        Assets.dispose();
     }
 }
