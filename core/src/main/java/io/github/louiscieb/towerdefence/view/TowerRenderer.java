@@ -34,7 +34,7 @@ public class TowerRenderer {
     public void render(SpriteBatch batch, Tower t) {
         TextureRegion frame = animation.getKeyFrame(t.getAnimTime());
 
-        float scale = 1.5f;
+        float scale = 1f;
         float w = frame.getRegionWidth() * scale;
         float h = frame.getRegionHeight() * scale;
 

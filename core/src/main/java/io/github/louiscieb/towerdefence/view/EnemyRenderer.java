@@ -11,7 +11,7 @@ import io.github.louiscieb.towerdefence.model.Enemy;
 
 public class EnemyRenderer {
 
-    private static final float SCALE = 5f;
+    private static final float SCALE = 4f;
 
     private final Animation<TextureRegion> runAnimation;
     private final Texture whitePixel;
