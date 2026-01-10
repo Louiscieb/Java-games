@@ -37,15 +37,15 @@ public class GameWorld {
     private static final int TOWER_COST = 50;
     private int gold = 300;
 
-    // ===== BASE =====
+    // ===== INIT =====
     private static final int BASE_MAX_HP = 20;
     private int baseHp = BASE_MAX_HP;
     private final Vector2 basePosition;
 
     // ===== ENEMY LEVELS =====
-    private static final int MAX_ENEMY_LEVEL = 10;
+    private static final int MAX_ENEMY_LEVEL = 15;
     private static final float ENEMY_LEVEL_INTERVAL = 20f;
-    private int enemyLevel = 1;
+    private int enemyLevel = 2;
 
     // ===== SPAWN CONTROL (🔥 FIX) =====
     private boolean spawningEnabled = true;
@@ -57,11 +57,11 @@ public class GameWorld {
     private final Path path;
 
     // =====================
-    // CONSTRUCTOR
+    // CONSTRUCTEUR
     // =====================
-    public GameWorld(TiledMap map, Viewport viewport) {
+    public GameWorld(TiledMap map, Viewport viewport) { //Constructeur de la partie
         this.viewport = viewport;
-
+        //Extraction, init et  verification de la map
         MapLayer entities = map.getLayers().get("entities");
         if (entities == null)
             throw new RuntimeException("Object layer 'entities' not found");
@@ -88,7 +88,7 @@ public class GameWorld {
     }
 
     // =====================
-    // UPDATE
+    // MAJ
     // =====================
     public void update(float delta) {
         if (state != GameState.RUNNING) return;
@@ -102,7 +102,7 @@ public class GameWorld {
                 enemyLevel++;
             } else {
                 // 🔥 stop spawning forever at level 10
-                spawningEnabled = false;
+                spawningEnabled = false;//victoire!
             }
         }
 
@@ -115,32 +115,33 @@ public class GameWorld {
             }
         }
 
-        // ===== UPDATE ENTITIES =====
+        // ===== MAJ ENTITEES =====
+        //Appel des methodes propre a chaques model
         for (Enemy e : enemies) e.update(delta);
         for (Tower t : towers) t.update(delta, enemies, projectiles);
         for (Projectile p : projectiles) p.update(delta);
 
         // ===== ENEMY RESOLUTION =====
-        for (int i = enemies.size - 1; i >= 0; i--) {
+        for (int i = enemies.size - 1; i >= 0; i--) { //Parcourt tt les unitées
             Enemy e = enemies.get(i);
 
-            if (e.reachedBase()) {
+            if (e.reachedBase()) { //Monstre arrivé a la base
                 baseHp--;
                 enemies.removeIndex(i);
 
                 if (baseHp <= 0) {
-                    state = GameState.GAME_OVER;
+                    state = GameState.GAME_OVER;//defaite :(
                 }
                 continue;
             }
 
-            if (e.isDead()) {
+            if (e.isDead()) {//mort unitée
                 gold += e.getGoldReward();
                 enemies.removeIndex(i);
             }
         }
 
-        // ===== PROJECTILE CLEANUP =====
+        // ===== Nettoyage PROJECTILE  =====
         for (int i = projectiles.size - 1; i >= 0; i--) {
             if (projectiles.get(i).isDone()) {
                 projectiles.removeIndex(i);
@@ -149,7 +150,7 @@ public class GameWorld {
 
         // ===== WIN CONDITION (🔥 NOW WORKS) =====
         if (!spawningEnabled && enemies.isEmpty() && baseHp > 0) {
-            state = GameState.WIN;
+            state = GameState.WIN; //VICTOIRE!!!
         }
 
         handleBuildInput();
@@ -157,16 +158,16 @@ public class GameWorld {
     }
 
     // =====================
-    // INPUT
+    // Entrée
     // =====================
     private void handleBuildInput() {
-        if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) return;
+        if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) return;// double input ?
 
         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         viewport.unproject(mouse);
 
         for (Rectangle zone : buildZones) {
-            if (!zone.contains(mouse.x, mouse.y)) continue;
+            if (!zone.contains(mouse.x, mouse.y)) continue; //Une tourelle par mini zone (chaques zone a 2 mini zones )
 
             if (countTowersInZone(zone) >= 1) return;
             if (gold < TOWER_COST) return;
@@ -182,12 +183,12 @@ public class GameWorld {
     }
 
     private void handleUpgradeInput() {
-        if (!Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) return;
+        if (!Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) return; //double input ?
 
         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         viewport.unproject(mouse);
 
-        for (Tower t : towers) {
+        for (Tower t : towers) { //Maj de la tour
             if (t.getPosition().dst(mouse.x, mouse.y) < 80f) {
                 if (t.canUpgrade(gold)) {
                     gold -= t.getUpgradeCost();

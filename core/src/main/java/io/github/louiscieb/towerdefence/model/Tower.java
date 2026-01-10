@@ -26,7 +26,7 @@ public class Tower {
         animTime += delta;
         cooldown -= delta;
 
-        if (cooldown <= 0f) {
+        if (cooldown <= 0f) { //tour active!
             Enemy target = findTarget(enemies);
             if (target != null) {
                 projectiles.add(new Projectile(position, target, damage));
@@ -36,13 +36,13 @@ public class Tower {
     }
 
     private Enemy findTarget(Array<Enemy> enemies) {
-        Enemy best = null;
-        float bestProgress = -1;
+        Enemy best = null; //l'heureux élu
+        float bestProgress = -1;//switch
 
-        for (Enemy e : enemies) {
+        for (Enemy e : enemies) {//parcours la liste d'ennemis
             if (e.isDead()) continue;
 
-            if (position.dst(e.getPosition()) <= range) {
+            if (position.dst(e.getPosition()) <= range) { //trouve l'enemmi le plus proche
                 if (e.getTargetIndex() > bestProgress) {
                     best = e;
                     bestProgress = e.getTargetIndex();
@@ -57,10 +57,10 @@ public class Tower {
 
     public void upgrade() {
         level++;
-        damage += 15;
+        damage += 10;
         range += 20;
-        fireRate *= 0.9f;
-        upgradeCost = (int)(upgradeCost * 1.6f);
+        fireRate *= 0.8f;
+        upgradeCost = (int)(upgradeCost * 1.8f);
     }
 
     // getters

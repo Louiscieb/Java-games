@@ -16,10 +16,10 @@ public class Enemy {
     private final Vector2 position;
     private int targetIndex = 0;
 
-    // ===== ANIMATION TIME (for View) =====
-    private float animTime = 0f;
+    // ===== Temps d'animation (Pour View) =====
+    private float animTime = 0f; //on le met ici pour ne pas a faire deux update (un update render et un update model)(car le delta est du coté de Gameworld)
 
-    public Enemy(Path path, int level) {
+    public Enemy(Path path, int level) {//constructeur
         this.path = path;
         this.position = path.first().cpy();
         this.level = level;
@@ -33,21 +33,21 @@ public class Enemy {
     public void update(float delta) {
         animTime += delta;
 
-        if (targetIndex >= path.size()) return;
+        if (targetIndex >= path.size()) return;//ennemi a la base
 
         Vector2 target = path.get(targetIndex);
-        Vector2 dir = target.cpy().sub(position);
-
+        Vector2 dir = target.cpy().sub(position);//a modifier si le jeu ramme
+        // Si l’ennemi est suffisamment proche du point suivant → passer au suivant
         if (dir.len() < 2f) {
             targetIndex++;
             return;
         }
 
         dir.nor();
-        position.mulAdd(dir, speed * delta);
+        position.mulAdd(dir, speed * delta);//fait avancer
     }
 
-    // ===== DAMAGE =====
+    // ===== DAMAGE =====targetIndex
     public void takeDamage(float amount) {
         hp -= amount;
         if (hp < 0) hp = 0;

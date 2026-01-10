@@ -16,7 +16,7 @@ public class Assets {
     private static boolean loaded = false;
 
     // =====================
-    // LOAD
+    // CHARGEMENT
     // =====================
     public static void load() {
         if (loaded) return;

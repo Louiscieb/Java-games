@@ -21,8 +21,8 @@ public class EnemyRenderer {
         // enemy frames
         Array<TextureRegion> frames = new Array<>();
         for (int i = 1; i <= 12; i++) {
-            Texture tex = new Texture("enemy/run" + i + ".png");
-            frames.add(new TextureRegion(tex));
+            Texture tex = new Texture("enemy/Run" + i + ".png"); //prends l'image suivante
+            frames.add(new TextureRegion(tex));// remplace l'ancinne frame
         }
         runAnimation = new Animation<>(0.08f, frames, Animation.PlayMode.LOOP);
 
