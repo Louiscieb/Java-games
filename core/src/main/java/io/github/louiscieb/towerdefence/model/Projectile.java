@@ -1,12 +1,12 @@
 package io.github.louiscieb.towerdefence.model;
-
 import com.badlogic.gdx.math.Vector2;
+import io.github.louiscieb.towerdefence.controller.GameWorld;
 
 public class Projectile {
-
     private final Vector2 position; //position
     private final Enemy target; //cible
     private final float damage; //degats
+    private boolean justCreated = true;
 
     private static final float SPEED = 400f;
 
@@ -21,7 +21,6 @@ public class Projectile {
 
     public void update(float delta) {
         animTime += delta;
-
         if (done || target == null || target.isDead()) {
             done = true;
             return;
@@ -31,6 +30,7 @@ public class Projectile {
 
         if (dir.len() < 8f) { //si dans la meme case
             target.takeDamage(damage);
+
             done = true;
             return;
         }
@@ -39,7 +39,16 @@ public class Projectile {
         position.mulAdd(dir, SPEED * delta);// Sinon mouvoir le projectile
     }
 
+
     // ===== GETTERS (MVC → VIEW) =====
+    public boolean consumeJustCreated() {
+        if (justCreated) {
+            justCreated = false;
+            return true;
+        }
+        return false;
+    }
+
     public Vector2 getPosition() {
         return position;
     }

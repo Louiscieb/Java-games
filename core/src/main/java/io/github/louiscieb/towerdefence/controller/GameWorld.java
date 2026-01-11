@@ -13,7 +13,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.Viewport;
-
+import io.github.louiscieb.towerdefence.audio.AudioManager;
 import io.github.louiscieb.towerdefence.model.*;
 
 public class GameWorld {
@@ -43,7 +43,7 @@ public class GameWorld {
     private final Vector2 basePosition;
 
     // ===== ENEMY LEVELS =====
-    private static final int MAX_ENEMY_LEVEL = 15;
+    private static final int MAX_ENEMY_LEVEL = 10;
     private static final float ENEMY_LEVEL_INTERVAL = 20f;
     private int enemyLevel = 2;
 
@@ -93,6 +93,7 @@ public class GameWorld {
     public void update(float delta) {
         if (state != GameState.RUNNING) return;
 
+
         // ===== LEVEL PROGRESSION =====
         enemyLevelTimer += delta;
         if (enemyLevelTimer >= ENEMY_LEVEL_INTERVAL) {
@@ -100,8 +101,7 @@ public class GameWorld {
 
             if (enemyLevel < MAX_ENEMY_LEVEL) {
                 enemyLevel++;
-            } else {
-                // 🔥 stop spawning forever at level 10
+            } else{
                 spawningEnabled = false;//victoire!
             }
         }
@@ -119,7 +119,11 @@ public class GameWorld {
         //Appel des methodes propre a chaques model
         for (Enemy e : enemies) e.update(delta);
         for (Tower t : towers) t.update(delta, enemies, projectiles);
-        for (Projectile p : projectiles) p.update(delta);
+        for (Projectile p : projectiles) {
+            if (p.consumeJustCreated()) {
+                AudioManager.getInstance().playProjectile();}
+            p.update(delta);
+        }
 
         // ===== ENEMY RESOLUTION =====
         for (int i = enemies.size - 1; i >= 0; i--) { //Parcourt tt les unitées
@@ -130,6 +134,7 @@ public class GameWorld {
                 enemies.removeIndex(i);
 
                 if (baseHp <= 0) {
+                    AudioManager.getInstance().playDefeat();
                     state = GameState.GAME_OVER;//defaite :(
                 }
                 continue;
@@ -138,6 +143,7 @@ public class GameWorld {
             if (e.isDead()) {//mort unitée
                 gold += e.getGoldReward();
                 enemies.removeIndex(i);
+                AudioManager.getInstance().playDying();
             }
         }
 
@@ -148,8 +154,9 @@ public class GameWorld {
             }
         }
 
-        // ===== WIN CONDITION (🔥 NOW WORKS) =====
+        // ===== WIN COND =====
         if (!spawningEnabled && enemies.isEmpty() && baseHp > 0) {
+            AudioManager.getInstance().playVictory();
             state = GameState.WIN; //VICTOIRE!!!
         }
 

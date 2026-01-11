@@ -11,8 +11,10 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import io.github.louiscieb.towerdefence.audio.AudioManager;
 import io.github.louiscieb.towerdefence.controller.GameWorld;
 import io.github.louiscieb.towerdefence.model.Enemy;
+import io.github.louiscieb.towerdefence.model.GameState;
 import io.github.louiscieb.towerdefence.model.Projectile;
 import io.github.louiscieb.towerdefence.model.Tower;
 import io.github.louiscieb.towerdefence.view.EnemyRenderer;
@@ -20,6 +22,7 @@ import io.github.louiscieb.towerdefence.view.HudRenderer;
 import io.github.louiscieb.towerdefence.view.ProjectileRenderer;
 import io.github.louiscieb.towerdefence.view.TowerRenderer;
 import io.github.louiscieb.towerdefence.view.Assets;
+
 
 public class Main extends ApplicationAdapter {
 
@@ -36,11 +39,13 @@ public class Main extends ApplicationAdapter {
 
     private GameWorld world;
 
+
     // ===== VIEW / RENDERERS =====
     private EnemyRenderer enemyRenderer;
     private TowerRenderer towerRenderer;
     private ProjectileRenderer projectileRenderer;
     private HudRenderer hudRenderer;
+    private GameState lastState = null;
 
     @Override
     public void create() {
@@ -60,13 +65,14 @@ public class Main extends ApplicationAdapter {
             camera
         );
 
+
         // ===== MAP =====
         map = new TmxMapLoader().load("maps/map.tmx");
         mapRenderer = new OrthogonalTiledMapRenderer(map);
 
         // ===== ASSETS (🔥 OBLIGATOIRE AVANT RENDERERS) =====
         Assets.load();
-
+        AudioManager.getInstance();
         // ===== CONTROLLER (MVC) =====
         world = new GameWorld(map, viewport);
 
@@ -92,6 +98,13 @@ public class Main extends ApplicationAdapter {
 
         // ===== UPDATE GAME (CONTROLLER) =====
         world.update(delta);
+
+        // ===== AUDIO =====
+        if (world.getState() == GameState.RUNNING) {
+            AudioManager.getInstance().playMusic();
+        } else {
+            AudioManager.getInstance().stopMusic();
+        }
 
         // ===== RENDER GAME (VIEW) =====
         batch.setProjectionMatrix(camera.combined);
@@ -157,7 +170,7 @@ public class Main extends ApplicationAdapter {
         if (mapRenderer != null) mapRenderer.dispose();
         if (map != null) map.dispose();
         if (batch != null) batch.dispose();
-
+        AudioManager.getInstance().dispose();
         Assets.dispose();
     }
 }

@@ -27,7 +27,7 @@ public class Enemy {
         this.maxHp = 120 + level * 60;
         this.hp = maxHp;
         this.speed = 70 + level * 6;
-        this.goldReward = 15 + level * 5;
+        this.goldReward = 10 + level * 5;
     }
 
     public void update(float delta) {
