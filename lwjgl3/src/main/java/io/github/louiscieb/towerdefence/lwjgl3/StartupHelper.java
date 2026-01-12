@@ -1,19 +1,3 @@
-/*
- * Copyright 2020 damios
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at:
- * https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-//Note, the above license and copyright applies to this file only.
-
 package io.github.louiscieb.towerdefence.lwjgl3;
 
 import com.badlogic.gdx.Version;
@@ -31,66 +15,123 @@ import static org.lwjgl.system.JNI.invokePPP;
 import static org.lwjgl.system.JNI.invokePPZ;
 import static org.lwjgl.system.macosx.ObjCRuntime.objc_getClass;
 import static org.lwjgl.system.macosx.ObjCRuntime.sel_getUid;
-//pas de Frameworks de logs mais pas grave pour un petit projet
-//Garentit que l'appli se lance correctement sur Windows et MacOs
+
+/**
+ * Classe utilitaire permettant de gérer le redémarrage de la JVM
+ * lorsque cela est nécessaire pour assurer la compatibilité
+ * avec certaines plateformes (Windows et macOS).
+ * <p>
+ * Elle permet notamment :
+ * <ul>
+ *     <li>D’éviter des bugs de chargement des DLL sous Windows</li>
+ *     <li>De garantir le lancement sur le thread principal sous macOS</li>
+ * </ul>
+ */
 public class StartupHelper {
 
+    /**
+     * <p>
+     * Argument JVM utilisé pour éviter les boucles infinies de redémarrage.
+     * </p>
+     */
     private static final String JVM_RESTARTED_ARG = "jvmIsRestarted";
 
+    /**
+     * <p>
+     * Constructeur privé pour empêcher l’instanciation de la classe.
+     * </p>
+     */
     private StartupHelper() {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Vérifie si la JVM doit être redémarrée et la relance si nécessaire.
+     *
+     * @param redirectOutput indique si la sortie standard doit être redirigée
+     * @return {@code true} si la JVM a été redémarrée, {@code false} sinon
+
+     */
     public static boolean startNewJvmIfRequired(boolean redirectOutput) {
         String osName = System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT);
+
+        /**
+         * <p>
+         * Cas Windows : évite un bug LWJGL lié aux caractères spéciaux
+         * dans le nom d’utilisateur.
+         * </p>
+         */
         if (!osName.contains("mac")) {
             if (osName.contains("windows")) {
-                // Évite un bug de chargement des dll de LWJGL3 sous Windows
-                // lorsque le nom d’utilisateur contient des caractères spéciaux.
-
                 String programData = System.getenv("ProgramData");
-                if(programData == null) programData = "C:\\Temp\\"; // if ProgramData isn't set, try some fallback.
+                if (programData == null) programData = "C:\\Temp\\";
+
                 String prevTmpDir = System.getProperty("java.io.tmpdir", programData);
                 String prevUser = System.getProperty("user.name", "libGDX_User");
+
                 System.setProperty("java.io.tmpdir", programData + "/libGDX-temp");
-                System.setProperty("user.name", ("User_" + prevUser.hashCode() + "_GDX" + Version.VERSION).replace('.', '_'));
+                System.setProperty(
+                    "user.name",
+                    ("User_" + prevUser.hashCode() + "_GDX" + Version.VERSION)
+                        .replace('.', '_')
+                );
+
                 Lwjgl3NativesLoader.load();
+
                 System.setProperty("java.io.tmpdir", prevTmpDir);
                 System.setProperty("user.name", prevUser);
             }
             return false;
         }
 
+        /**
+         * Cas GraalVM : aucun redémarrage nécessaire.
+         */
         if (!System.getProperty("org.graalvm.nativeimage.imagecode", "").isEmpty()) {
             return false;
         }
 
-        // Checks if we are already on the main thread, such as from running via Construo.
+        /**
+         * <p>
+         * Vérifie si l’application est déjà lancée sur le thread principal macOS.
+         * </p>
+         */
         long objc_msgSend = ObjCRuntime.getLibrary().getFunctionAddress("objc_msgSend");
-        long NSThread      = objc_getClass("NSThread");
+        long NSThread = objc_getClass("NSThread");
         long currentThread = invokePPP(NSThread, sel_getUid("currentThread"), objc_msgSend);
         boolean isMainThread = invokePPZ(currentThread, sel_getUid("isMainThread"), objc_msgSend);
-        if(isMainThread) return false;
+        if (isMainThread) return false;
 
         long pid = LibC.getpid();
         if ("1".equals(System.getenv("JAVA_STARTED_ON_FIRST_THREAD_" + pid))) {
             return false;
         }
 
-        //Check les boucles infinies
+        /**
+         * <p>
+         * Protection contre les boucles infinies de redémarrage.
+         * </p>
+         */
         if ("true".equals(System.getProperty(JVM_RESTARTED_ARG))) {
             System.err.println(
-                    "There was a problem evaluating whether the JVM was started with the -XstartOnFirstThread argument.");
+                "There was a problem evaluating whether the JVM was started with the -XstartOnFirstThread argument."
+            );
             return false;
         }
 
-        // Relance la JVM avec -XstartOnFirstThread (requis sur macOS)
+        /**
+         * <p>
+         * Relance la JVM avec l’option -XstartOnFirstThread (obligatoire sur macOS).
+         * </p>
+         */
         ArrayList<String> jvmArgs = new ArrayList<>();
         String separator = System.getProperty("file.separator", "/");
         String javaExecPath = System.getProperty("java.home") + separator + "bin" + separator + "java";
+
         if (!(new File(javaExecPath)).exists()) {
             System.err.println(
-                    "A Java installation could not be found. If you are distributing this app with a bundled JRE, be sure to set the -XstartOnFirstThread argument manually!");
+                "A Java installation could not be found. If you are distributing this app with a bundled JRE, be sure to set the -XstartOnFirstThread argument manually!"
+            );
             return false;
         }
 
@@ -100,6 +141,7 @@ public class StartupHelper {
         jvmArgs.addAll(ManagementFactory.getRuntimeMXBean().getInputArguments());
         jvmArgs.add("-cp");
         jvmArgs.add(System.getProperty("java.class.path"));
+
         String mainClass = System.getenv("JAVA_MAIN_CLASS_" + pid);
         if (mainClass == null) {
             StackTraceElement[] trace = Thread.currentThread().getStackTrace();
@@ -114,15 +156,17 @@ public class StartupHelper {
 
         try {
             if (!redirectOutput) {
-                ProcessBuilder processBuilder = new ProcessBuilder(jvmArgs);
-                processBuilder.start();
+                new ProcessBuilder(jvmArgs).start();
             } else {
-                Process process = (new ProcessBuilder(jvmArgs))
-                        .redirectErrorStream(true).start();
-                BufferedReader processOutput = new BufferedReader(
-                        new InputStreamReader(process.getInputStream()));
-                String line;
+                Process process = new ProcessBuilder(jvmArgs)
+                    .redirectErrorStream(true)
+                    .start();
 
+                BufferedReader processOutput = new BufferedReader(
+                    new InputStreamReader(process.getInputStream())
+                );
+
+                String line;
                 while ((line = processOutput.readLine()) != null) {
                     System.out.println(line);
                 }
@@ -137,6 +181,13 @@ public class StartupHelper {
         return true;
     }
 
+    /**
+     * Variante simplifiée de {@link #startNewJvmIfRequired(boolean)}
+     * avec redirection de la sortie activée.
+     *
+     * @return {@code true} si la JVM a été redémarrée, {@code false} sinon
+
+     */
     public static boolean startNewJvmIfRequired() {
         return startNewJvmIfRequired(true);
     }

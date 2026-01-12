@@ -5,19 +5,42 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 
+/**
+ * Gère le chargement et la libération des assets du jeu.
+ * <p>
+ * Cette classe centralise les textures et animations pour
+ * faciliter l’accès depuis les renderers.
+ * </p>
+ * <p>
+ * Actuellement, elle charge l’animation du projectile.
+ * </p>
+ */
 public class Assets {
 
     // ===== TEXTURES =====
+
+    /** Sprite sheet du projectile. */
     private static Texture projectileSheet;
 
     // ===== ANIMATIONS =====
+
+    /** Animation du projectile (boucle). */
     public static Animation<TextureRegion> projectileAnim;
 
+    /** Indique si les assets ont déjà été chargés. */
     private static boolean loaded = false;
 
     // =====================
     // CHARGEMENT
     // =====================
+
+    /**
+     * Charge tous les assets nécessaires.
+     * <p>
+     * Cette méthode est idempotente : les assets ne sont
+     * chargés qu’une seule fois.
+     * </p>
+     */
     public static void load() {
         if (loaded) return;
 
@@ -46,8 +69,16 @@ public class Assets {
     }
 
     // =====================
-    // DISPOSE
+    // NETTOYAGE
     // =====================
+
+    /**
+     * Libère tous les assets chargés.
+     * <p>
+     * Cette méthode doit être appelée lors de la fermeture
+     * du jeu pour éviter les fuites mémoire.
+     * </p>
+     */
     public static void dispose() {
         if (!loaded) return;
 
