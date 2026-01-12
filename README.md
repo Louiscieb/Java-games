@@ -1,33 +1,43 @@
 # TowerDefence
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+[![Java](https://img.shields.io/badge/Java-17-blue)](https://www.java.com/)
+[![Gradle](https://img.shields.io/badge/Gradle-8.2-green)](https://gradle.org/)
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+**TowerDefence** est un jeu de type **Tower Defense** développé en **Java** avec **libGDX**.  
+Le projet utilise **Tiled** pour la gestion des cartes et des niveaux.
 
-## Platforms
+Le module **core** contient la logique du jeu, tandis que **lwjgl3** est la plateforme bureau utilisant **LWJGL3**.
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+---
 
-## Gradle
+## Fonctionnalités
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+- Défense de base contre des vagues d’ennemis.
+- Gestion de tours et projectiles.
+- Cartes et niveaux créés avec **Tiled**.
+- Interface graphique simple et responsive via libGDX.
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+---
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+## Structure du projet
+
+TowerDefence/
+├─ core/# Logique et assets partagés
+  |-Audio + MVC
+├─ lwjgl3/ # Plateforme desktop LWJGL3
+├─ build/ # Dossiers de compilation
+├─ assets/ # Sons, images, cartes Tiled
+├─ gradlew # Wrapper Gradle
+├─ build.gradle
+└─ settings.gradle
+
+
+## Lancer le jeu
+
+Pour démarrer le jeu sur ordinateur, ouvrez un terminal dans le dossier racine du projet et exécutez :
+
+- **Windows** :
+```cmd
+gradlew lwjgl3:run
+- **Linux** :
+./gradlew lwjgl3:run
