@@ -17,41 +17,101 @@ import io.github.louiscieb.towerdefence.model.Enemy;
 import io.github.louiscieb.towerdefence.model.GameState;
 import io.github.louiscieb.towerdefence.model.Projectile;
 import io.github.louiscieb.towerdefence.model.Tower;
-import io.github.louiscieb.towerdefence.view.EnemyRenderer;
-import io.github.louiscieb.towerdefence.view.HudRenderer;
-import io.github.louiscieb.towerdefence.view.ProjectileRenderer;
-import io.github.louiscieb.towerdefence.view.TowerRenderer;
-import io.github.louiscieb.towerdefence.view.Assets;
+import io.github.louiscieb.towerdefence.view.*;
 
+/**
+ * Point d’entrée principal du jeu Tower Defence.
+ * <p>
+ * Cette classe gère :
+ * <ul>
+ *     <li>L’initialisation du moteur LibGDX</li>
+ *     <li>La caméra et le viewport</li>
+ *     <li>Le chargement de la carte</li>
+ *     <li>La boucle principale du jeu (update + render)</li>
+ * </ul>
+ * <p>
+ * Elle joue le rôle de lien entre le contrôleur
+ * ({@link io.github.louiscieb.towerdefence.controller.GameWorld})
+ * et les différentes vues (renderers).
+ * </p>
+ */
 
 public class Main extends ApplicationAdapter {
 
+    // =====================
+    // CONSTANTES
+    // =====================
+
+    /** Taille d’une tuile en pixels. */
     private static final int TILE_SIZE = 32;
+
+    /** Largeur de la carte (en tuiles). */
     private static final int MAP_WIDTH = 50;
+
+    /** Hauteur de la carte (en tuiles). */
     private static final int MAP_HEIGHT = 50;
 
+    // =====================
+    // CORE LIBGDX
+    // =====================
+
+    /** SpriteBatch principal pour le rendu. */
     private SpriteBatch batch;
+
+    /** Caméra orthographique du jeu. */
     private OrthographicCamera camera;
+
+    /** Viewport pour gérer le redimensionnement. */
     private Viewport viewport;
 
+    // =====================
+    // MAP
+    // =====================
+
+    /** Carte Tiled du jeu. */
     private TiledMap map;
+
+    /** Renderer de la carte Tiled. */
     private OrthogonalTiledMapRenderer mapRenderer;
 
+    // =====================
+    // CONTROLLER
+    // =====================
+
+    /** Monde du jeu (logique principale). */
     private GameWorld world;
 
+    // =====================
+    // VIEW / RENDERERS
+    // =====================
 
-    // ===== VIEW / RENDERERS =====
     private EnemyRenderer enemyRenderer;
     private TowerRenderer towerRenderer;
     private ProjectileRenderer projectileRenderer;
     private HudRenderer hudRenderer;
-    private GameState lastState = null;
 
+
+    // =====================
+    // INITIALISATION
+    // =====================
+
+    /**
+     * Méthode appelée au lancement du jeu.
+     * <p>
+     * Initialise :
+     * <ul>
+     *     <li>La caméra et le viewport</li>
+     *     <li>La carte et son renderer</li>
+     *     <li>Les assets (textures, sons)</li>
+     *     <li>Le monde du jeu (MVC)</li>
+     *     <li>Les renderers</li>
+     * </ul>
+     */
     @Override
     public void create() {
         batch = new SpriteBatch();
 
-        // ===== CAMERA (VIEW ONLY) =====
+        // ===== CAMERA =====
         camera = new OrthographicCamera();
         camera.setToOrtho(false,
             MAP_WIDTH * TILE_SIZE,
@@ -65,28 +125,46 @@ public class Main extends ApplicationAdapter {
             camera
         );
 
-
         // ===== MAP =====
         map = new TmxMapLoader().load("maps/map.tmx");
         mapRenderer = new OrthogonalTiledMapRenderer(map);
 
-        // ===== ASSETS (🔥 OBLIGATOIRE AVANT RENDERERS) =====
+        // ===== ASSETS & AUDIO =====
         Assets.load();
         AudioManager.getInstance();
-        // ===== CONTROLLER (MVC) =====
+
+        // ===== CONTROLLER =====
         world = new GameWorld(map, viewport);
 
-        // ===== VIEW / RENDERERS =====
+        // ===== VIEW =====
         enemyRenderer = new EnemyRenderer();
         towerRenderer = new TowerRenderer();
         projectileRenderer = new ProjectileRenderer();
         hudRenderer = new HudRenderer();
     }
 
+    // =====================
+    // BOUCLE PRINCIPALE
+    // =====================
+
+    /**
+     * Boucle principale du jeu.
+     * <p>
+     * Appelée à chaque frame, elle gère :
+     * <ul>
+     *     <li>La mise à jour de la logique du jeu</li>
+     *     <li>Le rendu de la carte</li>
+     *     <li>Le rendu des entités</li>
+     *     <li>Le HUD</li>
+     *     <li>La gestion du son</li>
+     * </ul>
+     *
+     */
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
 
+        // ===== CLEAR =====
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -96,7 +174,7 @@ public class Main extends ApplicationAdapter {
         mapRenderer.setView(camera);
         mapRenderer.render();
 
-        // ===== UPDATE GAME (CONTROLLER) =====
+        // ===== UPDATE GAME =====
         world.update(delta);
 
         // ===== AUDIO =====
@@ -106,7 +184,7 @@ public class Main extends ApplicationAdapter {
             AudioManager.getInstance().stopMusic();
         }
 
-        // ===== RENDER GAME (VIEW) =====
+        // ===== RENDER GAME =====
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -152,11 +230,28 @@ public class Main extends ApplicationAdapter {
         batch.end();
     }
 
+    // =====================
+    // RESIZE
+    // =====================
+
+    /**
+     * Appelée lors d’un redimensionnement de la fenêtre.
+     *
+     * @param width  nouvelle largeur
+     * @param height nouvelle hauteur
+     */
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
     }
 
+    // =====================
+    // NETTOYAGE
+    // =====================
+
+    /**
+     * Libère toutes les ressources utilisées par le jeu.
+     */
     @Override
     public void dispose() {
 
@@ -166,10 +261,11 @@ public class Main extends ApplicationAdapter {
         if (projectileRenderer != null) projectileRenderer.dispose();
         if (hudRenderer != null) hudRenderer.dispose();
 
-        // ===== MAP / CORE =====
+        // ===== CORE =====
         if (mapRenderer != null) mapRenderer.dispose();
         if (map != null) map.dispose();
         if (batch != null) batch.dispose();
+
         AudioManager.getInstance().dispose();
         Assets.dispose();
     }

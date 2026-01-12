@@ -16,52 +16,128 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.louiscieb.towerdefence.audio.AudioManager;
 import io.github.louiscieb.towerdefence.model.*;
 
+/**
+ * Représente le monde de jeu et la logique principale d’une partie.
+ * <p>
+ * Cette classe agit comme un contrôleur central :
+ * <ul>
+ *     <li>Gestion des ennemis, tours et projectiles</li>
+ *     <li>Gestion de l’économie (or, coût des tours)</li>
+ *     <li>Progression des niveaux ennemis</li>
+ *     <li>Conditions de victoire et de défaite</li>
+ *     <li>Gestion des entrées joueur (construction / amélioration)</li>
+ * </ul>
+ */
 public class GameWorld {
 
-    // ===== MODEL COLLECTIONS =====
+    // =====================
+    // COLLECTIONS DU MODELE
+    // =====================
+
+    /** Liste des ennemis actifs. */
     private final Array<Enemy> enemies = new Array<>();
+
+    /** Liste des tours construites. */
     private final Array<Tower> towers = new Array<>();
+
+    /** Liste des projectiles actifs. */
     private final Array<Projectile> projectiles = new Array<>();
 
-    // ===== BUILD ZONES =====
+    // =====================
+    // ZONES DE CONSTRUCTION
+    // =====================
+
+    /** Zones autorisées pour la construction des tours. */
     private final Array<Rectangle> buildZones = new Array<>();
 
-    // ===== VIEWPORT =====
+    // =====================
+    // AFFICHAGE
+    // =====================
+
+    /** Viewport utilisé pour convertir les coordonnées écran ↔ monde. */
     private final Viewport viewport;
 
-    // ===== TIMERS =====
+    // =====================
+    // TIMERS
+    // =====================
+
+    /** Timer de génération des ennemis. */
     private float spawnTimer = 0f;
+
+    /** Timer de progression du niveau des ennemis. */
     private float enemyLevelTimer = 0f;
 
-    // ===== ECONOMY =====
+    // =====================
+    // ECONOMIE
+    // =====================
+
+    /** Coût de construction d’une tour. */
     private static final int TOWER_COST = 50;
+
+    /** Quantité d’or du joueur. */
     private int gold = 300;
 
-    // ===== INIT =====
+    // =====================
+    // BASE
+    // =====================
+
+    /** Points de vie maximum de la base. */
     private static final int BASE_MAX_HP = 20;
+
+    /** Points de vie actuels de la base. */
     private int baseHp = BASE_MAX_HP;
+
+    /** Position de la base (fin du chemin). */
     private final Vector2 basePosition;
 
-    // ===== ENEMY LEVELS =====
+    // =====================
+    // NIVEAUX ENNEMIS
+    // =====================
+
+    /** Niveau maximum des ennemis. */
     private static final int MAX_ENEMY_LEVEL = 10;
+
+    /** Temps entre chaque augmentation de niveau ennemi. */
     private static final float ENEMY_LEVEL_INTERVAL = 20f;
+
+    /** Niveau actuel des ennemis. */
     private int enemyLevel = 2;
 
-    // ===== SPAWN CONTROL (🔥 FIX) =====
+    // =====================
+    // CONTROLE DU SPAWN
+    // =====================
+
+    /** Indique si le spawn des ennemis est actif. */
     private boolean spawningEnabled = true;
 
-    // ===== GAME STATE =====
+    // =====================
+    // ETAT DU JEU
+    // =====================
+
+    /** État actuel de la partie. */
     private GameState state = GameState.RUNNING;
 
-    // ===== PATH =====
+    // =====================
+    // CHEMIN DES ENNEMIS
+    // =====================
+
+    /** Chemin suivi par les ennemis. */
     private final Path path;
 
     // =====================
     // CONSTRUCTEUR
     // =====================
-    public GameWorld(TiledMap map, Viewport viewport) { //Constructeur de la partie
+
+    /**
+     * Crée un nouveau monde de jeu à partir d’une carte Tiled.
+     *
+     * @param map      carte Tiled contenant le chemin et les zones de construction
+     * @param viewport viewport utilisé pour les conversions de coordonnées
+     * @throws RuntimeException si la couche "entities" est absente
+     */
+    public GameWorld(TiledMap map, Viewport viewport) {
         this.viewport = viewport;
-        //Extraction, init et  verification de la map
+
         MapLayer entities = map.getLayers().get("entities");
         if (entities == null)
             throw new RuntimeException("Object layer 'entities' not found");
@@ -88,25 +164,30 @@ public class GameWorld {
     }
 
     // =====================
-    // MAJ
+    // MISE A JOUR
     // =====================
+
+    /**
+     * Met à jour l’état du monde de jeu.
+     *
+     * @param delta temps écoulé depuis la dernière frame
+     */
     public void update(float delta) {
         if (state != GameState.RUNNING) return;
 
-
-        // ===== LEVEL PROGRESSION =====
+        // Progression du niveau des ennemis
         enemyLevelTimer += delta;
         if (enemyLevelTimer >= ENEMY_LEVEL_INTERVAL) {
             enemyLevelTimer = 0f;
 
             if (enemyLevel < MAX_ENEMY_LEVEL) {
                 enemyLevel++;
-            } else{
-                spawningEnabled = false;//victoire!
+            } else {
+                spawningEnabled = false;
             }
         }
 
-        // ===== SPAWNING =====
+        // Génération des ennemis
         if (spawningEnabled) {
             spawnTimer += delta;
             if (spawnTimer > 2f) {
@@ -115,49 +196,49 @@ public class GameWorld {
             }
         }
 
-        // ===== MAJ ENTITEES =====
-        //Appel des methodes propre a chaques model
+        // Mise à jour des entités
         for (Enemy e : enemies) e.update(delta);
         for (Tower t : towers) t.update(delta, enemies, projectiles);
         for (Projectile p : projectiles) {
             if (p.consumeJustCreated()) {
-                AudioManager.getInstance().playProjectile();}
+                AudioManager.getInstance().playProjectile();
+            }
             p.update(delta);
         }
 
-        // ===== ENEMY RESOLUTION =====
-        for (int i = enemies.size - 1; i >= 0; i--) { //Parcourt tt les unitées
+        // Gestion des ennemis
+        for (int i = enemies.size - 1; i >= 0; i--) {
             Enemy e = enemies.get(i);
 
-            if (e.reachedBase()) { //Monstre arrivé a la base
+            if (e.reachedBase()) {
                 baseHp--;
                 enemies.removeIndex(i);
 
                 if (baseHp <= 0) {
                     AudioManager.getInstance().playDefeat();
-                    state = GameState.GAME_OVER;//defaite :(
+                    state = GameState.GAME_OVER;
                 }
                 continue;
             }
 
-            if (e.isDead()) {//mort unitée
+            if (e.isDead()) {
                 gold += e.getGoldReward();
                 enemies.removeIndex(i);
                 AudioManager.getInstance().playDying();
             }
         }
 
-        // ===== Nettoyage PROJECTILE  =====
+        // Nettoyage des projectiles
         for (int i = projectiles.size - 1; i >= 0; i--) {
             if (projectiles.get(i).isDone()) {
                 projectiles.removeIndex(i);
             }
         }
 
-        // ===== WIN COND =====
+        // Condition de victoire
         if (!spawningEnabled && enemies.isEmpty() && baseHp > 0) {
             AudioManager.getInstance().playVictory();
-            state = GameState.WIN; //VICTOIRE!!!
+            state = GameState.WIN;
         }
 
         handleBuildInput();
@@ -165,16 +246,18 @@ public class GameWorld {
     }
 
     // =====================
-    // Entrée
+    // GESTION DES ENTREES
     // =====================
+
+    /** Gère l’entrée de construction des tours. */
     private void handleBuildInput() {
-        if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) return;// double input ?
+        if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) return;
 
         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         viewport.unproject(mouse);
 
         for (Rectangle zone : buildZones) {
-            if (!zone.contains(mouse.x, mouse.y)) continue; //Une tourelle par mini zone (chaques zone a 2 mini zones )
+            if (!zone.contains(mouse.x, mouse.y)) continue;
 
             if (countTowersInZone(zone) >= 1) return;
             if (gold < TOWER_COST) return;
@@ -189,13 +272,14 @@ public class GameWorld {
         }
     }
 
+    /** Gère l’amélioration des tours existantes. */
     private void handleUpgradeInput() {
-        if (!Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) return; //double input ?
+        if (!Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) return;
 
         Vector3 mouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         viewport.unproject(mouse);
 
-        for (Tower t : towers) { //Maj de la tour
+        for (Tower t : towers) {
             if (t.getPosition().dst(mouse.x, mouse.y) < 80f) {
                 if (t.canUpgrade(gold)) {
                     gold -= t.getUpgradeCost();
@@ -206,6 +290,12 @@ public class GameWorld {
         }
     }
 
+    /**
+     * Compte le nombre de tours présentes dans une zone donnée.
+     *
+     * @param zone zone de construction
+     * @return nombre de tours dans la zone
+     */
     private int countTowersInZone(Rectangle zone) {
         for (Tower t : towers) {
             if (zone.contains(t.getPosition().x, t.getPosition().y))
@@ -217,6 +307,7 @@ public class GameWorld {
     // =====================
     // GETTERS
     // =====================
+
     public Array<Enemy> getEnemies() { return enemies; }
     public Array<Tower> getTowers() { return towers; }
     public Array<Projectile> getProjectiles() { return projectiles; }
