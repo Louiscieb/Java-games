@@ -22,10 +22,8 @@ Le module **core** contient la logique du jeu, tandis que **lwjgl3** est la plat
 ## Structure du projet
 
 TowerDefence/
-├─ core/# Logique et assets partagés
+├─ core/Audio + MVC# Logique et assets partagés
 
-  |-Audio + MVC
-  
 ├─ lwjgl3/ # Plateforme desktop LWJGL3
 
 ├─ build/ # Dossiers de compilation
