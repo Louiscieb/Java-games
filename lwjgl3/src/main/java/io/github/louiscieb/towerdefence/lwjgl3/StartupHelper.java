@@ -30,12 +30,16 @@ import static org.lwjgl.system.macosx.ObjCRuntime.sel_getUid;
 public class StartupHelper {
 
     /**
+     * <p>
      * Argument JVM utilisé pour éviter les boucles infinies de redémarrage.
+     * </p>
      */
     private static final String JVM_RESTARTED_ARG = "jvmIsRestarted";
 
     /**
+     * <p>
      * Constructeur privé pour empêcher l’instanciation de la classe.
+     * </p>
      */
     private StartupHelper() {
         throw new UnsupportedOperationException();
@@ -46,13 +50,16 @@ public class StartupHelper {
      *
      * @param redirectOutput indique si la sortie standard doit être redirigée
      * @return {@code true} si la JVM a été redémarrée, {@code false} sinon
+
      */
     public static boolean startNewJvmIfRequired(boolean redirectOutput) {
         String osName = System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT);
 
         /**
+         * <p>
          * Cas Windows : évite un bug LWJGL lié aux caractères spéciaux
          * dans le nom d’utilisateur.
+         * </p>
          */
         if (!osName.contains("mac")) {
             if (osName.contains("windows")) {
@@ -85,7 +92,9 @@ public class StartupHelper {
         }
 
         /**
+         * <p>
          * Vérifie si l’application est déjà lancée sur le thread principal macOS.
+         * </p>
          */
         long objc_msgSend = ObjCRuntime.getLibrary().getFunctionAddress("objc_msgSend");
         long NSThread = objc_getClass("NSThread");
@@ -99,7 +108,9 @@ public class StartupHelper {
         }
 
         /**
+         * <p>
          * Protection contre les boucles infinies de redémarrage.
+         * </p>
          */
         if ("true".equals(System.getProperty(JVM_RESTARTED_ARG))) {
             System.err.println(
@@ -109,7 +120,9 @@ public class StartupHelper {
         }
 
         /**
+         * <p>
          * Relance la JVM avec l’option -XstartOnFirstThread (obligatoire sur macOS).
+         * </p>
          */
         ArrayList<String> jvmArgs = new ArrayList<>();
         String separator = System.getProperty("file.separator", "/");
@@ -173,6 +186,7 @@ public class StartupHelper {
      * avec redirection de la sortie activée.
      *
      * @return {@code true} si la JVM a été redémarrée, {@code false} sinon
+
      */
     public static boolean startNewJvmIfRequired() {
         return startNewJvmIfRequired(true);

@@ -59,26 +59,34 @@ public class Lwjgl3Launcher {
         configuration.setTitle("TowerDefence");
 
         /**
+         * <p>
          * Active la VSync pour synchroniser le rendu avec la fréquence de l’écran
          * afin d’éviter le tearing et d’améliorer la stabilité visuelle.
+         * </p>
          */
         configuration.useVsync(true);
 
         /**
+         * <p>
          * Limite le nombre de FPS en fonction de la fréquence de rafraîchissement
          * de l’écran (+1 pour garantir l’activation de la VSync).
+         * </p>
          */
         configuration.setForegroundFPS(
             Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1
         );
 
         /**
+         * <p>
          * Définit la taille de la fenêtre en mode fenêtré.
+         * </p>
          */
         configuration.setWindowedMode(640, 480);
 
         /**
+         * <p>
          * Définit les icônes de l'application pour les différents formats.
+         * </p>
          */
         configuration.setWindowIcon(
             "libgdx128.png",
@@ -88,8 +96,10 @@ public class Lwjgl3Launcher {
         );
 
         /**
+         * <p>
          * Active l’émulation OpenGL via ANGLE afin d’améliorer la compatibilité
          * sur différentes plateformes et configurations matérielles.
+         * </p>
          */
         configuration.setOpenGLEmulation(
             Lwjgl3ApplicationConfiguration.GLEmulation.ANGLE_GLES20,
